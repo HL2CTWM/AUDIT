@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>內部稽核作業流程圖 & AI 助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 html2pdf 套件 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- 引入 marked.js 用於解析 AI 回傳的 Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#e0f2fe',
+                edgeLabelBackground: '#ffffff',
+                tertiaryColor: '#fff',
+                lineColor: '#334155'
+            },
+            flowchart: {
+                useMaxWidth: false,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+    </script>
+    <style>
+        body { font-family: 'Microsoft JhengHei', sans-serif; background-color: #f8fafc; }
+        .mermaid { display: flex; justify-content: center; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        
+        /* Loading Animation */
+        .loading-dots:after {
+            content: ' .';
+            animation: dots 1s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: ' .'; }
+            40% { content: ' ..'; }
+            60% { content: ' ...'; }
+            80%, 100% { content: ''; }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="p-4 md:p-8 text-slate-800">
+
+    <div class="max-w-7xl mx-auto space-y-8">
+        
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-800 mb-2">內部稽核缺失改善暨結案作業系統</h1>
+                <p class="text-slate-600">標準作業流程圖 (SOP) 與 AI 輔助工具</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="downloadPNG()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold py-2 px-4 rounded border border-indigo-200 transition-colors flex items-center text-sm">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    下載流程圖 (PNG)
+                </button>
+                <button id="pdfBtn" onclick="downloadPDF()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded border border-slate-300 transition-colors flex items-center text-sm">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                    下載流程圖 (PDF)
+                </button>
+            </div>
+        </div>
+
+        <!-- Grid Layout: Flowchart (Left) & AI (Right) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Left Column: Flowchart (Span 2) -->
+            <div class="lg:col-span-2 flex flex-col h-full">
+                <div id="print-area" class="bg-white rounded-lg shadow-lg p-6 h-full">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-slate-700">作業流程圖</h2>
+                        <div class="flex gap-4 text-xs">
+                            <div class="flex items-center"><span class="w-3 h-3 bg-blue-100 border border-blue-500 mr-2 rounded-sm"></span>稽核室</div>
+                            <div class="flex items-center"><span class="w-3 h-3 bg-green-100 border border-green-500 mr-2 rounded-sm"></span>受檢單位</div>
+                            <div class="flex items-center"><span class="w-3 h-3 bg-yellow-100 border border-yellow-600 mr-2 rounded-sm"></span>管理層</div>
+                        </div>
+                    </div>
+
+                    <!-- Mermaid Diagram Container -->
+                    <div id="mermaid-container" class="mermaid overflow-x-auto">
+                        graph TD
+                            %% 定義樣式
+                            classDef audit fill:#e0f2fe,stroke:#0284c7,stroke-width:2px;
+                            classDef unit fill:#dcfce7,stroke:#16a34a,stroke-width:2px;
+                            classDef mgmt fill:#fef3c7,stroke:#d97706,stroke-width:2px;
+                            classDef doc fill:#f3f4f6,stroke:#4b5563,stroke-dasharray: 5 5;
+                            classDef startend fill:#1e293b,stroke:#000,color:#fff;
+
+                            %% --- 階段一：缺失提列 (流程一) ---
+                            Start((開始)):::startend --> Step1[稽核人員<br/>新增缺失態樣]:::audit
+                            Step1 --> Doc1(流程一<br/>缺失建立):::doc
+                            Doc1 --> Step2[產製:內部稽核提列意見<br/>暨辦理改善情形彙總表]:::audit
+                            Step2 --> Doc2(流程二表單<br/>含風險等級/摘要/處理意見):::doc
+                            
+                            %% --- 階段二：受查單位辦理 (流程二) ---
+                            Doc2 --> Step3[稽核人員檢視發送]:::audit
+                            Step3 -->|發送| Step4[受檢單位副主管<br/>*若休假自動發送代理人]:::unit
+                            Step4 -->|分派缺失| Step5[經辦人員<br/>辦理改善]:::unit
+                            Step5 -->|填寫說明/檢附檔案| Step6[經辦人員簽註完成]:::unit
+                            Step6 --> Step7{單位內部覆核}:::unit
+                            
+                            Step7 -->|上呈| Step8[副主管覆核]:::unit
+                            Step8 -->|上呈| Step9[經理核准]:::unit
+                            Step8 -.->|退回| Step5
+                            Step9 -.->|退回| Step5
+
+                            %% --- 階段三：稽核室覆核 (流程二) ---
+                            Step9 -->|回傳| Step10[稽核人員<br/>填註覆核結果]:::audit
+                            Step10 -->|上呈| Step11{稽核覆核主管<br/>選擇:林or曾}:::audit
+                            Step10 -.->|退回補件| Step5
+                            
+                            Step11 --> Step12[總稽核]:::audit
+                            Step11 -.->|退回| Step10
+                            Step12 -.->|退回| Step10
+
+                            %% --- 階段四：高階簽核 (流程二) ---
+                            Step12 -->|轉敬會| Step13{督導協理<br/>選擇:曾or陳}:::mgmt
+                            Step13 --> Step14[副總經理]:::mgmt
+                            Step14 --> Step15[總經理]:::mgmt
+                            
+                            Step13 -.->|退回| Step12
+                            Step14 -.->|退回| Step13
+                            Step15 -.->|退回| Step14
+
+                            %% --- 階段五：結案與評分 (流程三) ---
+                            Step15 -->|簽核完成| Step16[產製:稽核作業<br/>受查單位缺失事項表]:::audit
+                            Step16 --> Doc3(流程三表單<br/>含加減分/加總分數):::doc
+                            Doc3 --> Step17[稽核人員確認分數]:::audit
+                            
+                            Step17 --> Step18{稽核覆核主管<br/>選擇:曾or林}:::audit
+                            Step18 --> Step19[總稽核]:::audit
+                            Step19 --> Step20{督導協理<br/>選擇:曾or陳}:::mgmt
+                            Step20 --> Step21[副總經理]:::mgmt
+                            Step21 --> Step22[總經理]:::mgmt
+
+                            %% 流程三退回機制
+                            Step18 -.->|退回| Step17
+                            Step19 -.->|退回| Step18
+                            Step20 -.->|退回| Step19
+                            Step21 -.->|退回| Step20
+                            Step22 -.->|退回| Step21
+
+                            %% --- 階段六：結案通知 ---
+                            Step22 -->|轉回| Step23[稽核人員<br/>結案作業]:::audit
+                            Step23 -->|傳送簽核結果及總扣分| Step24[受檢單位<br/>副主管及經理]:::unit
+                            Step24 --> End((結案)):::startend
+                    </div>
+                    
+                    <div class="mt-8 border-t pt-4">
+                        <h3 class="text-lg font-semibold text-slate-700">圖例說明</h3>
+                        <ul class="list-disc list-inside text-slate-600 mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <li><span class="font-bold text-blue-600">藍色區塊</span>：稽核室作業 (Audit Dept)</li>
+                            <li><span class="font-bold text-green-600">綠色區塊</span>：受檢單位作業 (Audited Unit)</li>
+                            <li><span class="font-bold text-yellow-600">黃色區塊</span>：高階管理層 (Senior Mgmt)</li>
+                            <li><span class="font-bold text-gray-500">虛線箭頭</span>：退回/修正路徑</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Gemini AI Assistant -->
+            <div class="lg:col-span-1">
+                <div class="bg-gradient-to-b from-indigo-50 to-white rounded-lg shadow-lg border border-indigo-100 h-full flex flex-col sticky top-4">
+                    <div class="p-4 border-b border-indigo-100 bg-indigo-600 rounded-t-lg">
+                        <h2 class="text-xl font-bold text-white flex items-center">
+                            <span class="text-2xl mr-2">✨</span> HL2C AI 稽核智能助手
+                        </h2>
+                        <p class="text-indigo-100 text-sm mt-1">HL2C</p>
+                    </div>
+
+                    <div class="p-6 flex-1 flex flex-col gap-6">
+                        
+                        <!-- 1. API Key Config Section (New) -->
+                        <div class="bg-indigo-50 p-3 rounded-md border border-indigo-100 shadow-sm">
+                            <label class="block text-xs font-bold text-indigo-700 mb-1 flex justify-between">
+                                <span>🔑 Google Gemini API Key 設定</span>
+                                <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-indigo-400 hover:text-indigo-600 underline">取得 Key</a>
+                            </label>
+                            <input type="password" id="apiKeyInput" 
+                                class="w-full p-2 border border-indigo-200 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                placeholder="請在此貼上 API Key (sk-...)"
+                                onchange="updateApiKey(this.value)">
+                            <p class="text-[10px] text-indigo-500 mt-1 flex items-center">
+                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                您的金鑰僅暫存於記憶體，關閉網頁即清除。
+                            </p>
+                        </div>
+
+                        <!-- 2. Input Section -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">
+                                原始稽核發現 / 觀察點
+                            </label>
+                            <textarea id="auditInput" rows="4" 
+                                class="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                                placeholder="例如：今日查核發現零用金保管箱在午休期間沒有上鎖，且經辦人員不在座位上。"></textarea>
+                        </div>
+
+                        <!-- 3. Action Buttons Grid -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="generateAuditFinding()" 
+                                class="col-span-2 bg-white border-2 border-indigo-600 text-indigo-700 hover:bg-indigo-50 font-bold py-2 px-4 rounded-lg flex items-center justify-center transition-colors">
+                                <span>📝 生成缺失報告</span>
+                            </button>
+                            <button onclick="assessRisk()" 
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-2 rounded-lg flex items-center justify-center transition-colors shadow-md text-sm">
+                                <span>🛡️ 風險評估</span>
+                            </button>
+                            <button onclick="analyzeRootCause()" 
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-2 rounded-lg flex items-center justify-center transition-colors shadow-md text-sm">
+                                <span>🔍 根因分析</span>
+                            </button>
+                            <button onclick="generateInterviewQuestions()" 
+                                class="col-span-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center transition-colors shadow-md">
+                                <span>❓ 生成延伸訪談提問</span>
+                            </button>
+                        </div>
+
+                        <!-- 4. Result Section -->
+                        <div class="flex-1 min-h-[300px] border rounded-lg bg-slate-50 relative overflow-hidden flex flex-col">
+                            <div class="bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600 uppercase tracking-wider">
+                                AI 分析結果
+                            </div>
+                            <div id="resultContent" class="p-4 text-sm text-slate-700 overflow-y-auto flex-1 prose prose-sm max-w-none">
+                                <p class="text-slate-400 italic text-center mt-8">請先輸入 API Key<br>接著輸入內容並點擊功能按鈕...</p>
+                            </div>
+                            <!-- Loading Overlay -->
+                            <div id="loadingOverlay" class="absolute inset-0 bg-white/90 hidden flex flex-col items-center justify-center z-10">
+                                <div class="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-2"></div>
+                                <span class="text-indigo-600 font-medium loading-dots">正在思考中</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Functionalities -->
+    <script>
+        // --- 1. PDF & PNG Download Logic ---
+        function downloadPDF() {
+            const element = document.getElementById('print-area');
+            const btn = document.getElementById('pdfBtn');
+            const originalText = btn.innerHTML;
+            
+            btn.innerText = "產製中...";
+            btn.disabled = true;
+
+            const opt = {
+                margin:       5,
+                filename:     '稽核作業流程圖.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, logging: false },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }).catch(err => {
+                console.error(err);
+                alert("產製失敗，建議使用「下載 PNG」功能。");
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
+        }
+
+        async function downloadPNG() {
+            const svgElement = document.querySelector("#mermaid-container svg");
+            if (!svgElement) {
+                alert("流程圖尚未載入，請稍候");
+                return;
+            }
+
+            const serializer = new XMLSerializer();
+            const svgString = serializer.serializeToString(svgElement);
+            const svgBlob = new Blob([svgString], {type: "image/svg+xml;charset=utf-8"});
+            const url = URL.createObjectURL(svgBlob);
+
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement("canvas");
+                const scale = 2; 
+                canvas.width = svgElement.getBoundingClientRect().width * scale;
+                canvas.height = svgElement.getBoundingClientRect().height * scale;
+                
+                const ctx = canvas.getContext("2d");
+                ctx.fillStyle = "white";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.scale(scale, scale);
+                ctx.drawImage(img, 0, 0);
+
+                const pngUrl = canvas.toDataURL("image/png");
+                const downloadLink = document.createElement("a");
+                downloadLink.href = pngUrl;
+                downloadLink.download = "稽核作業流程圖.png";
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                
+                URL.revokeObjectURL(url);
+            };
+            img.src = url;
+        }
+
+        // --- 2. Gemini AI Integration Logic ---
+        
+        let userApiKey = ""; // Stores the key in memory only
+
+        function updateApiKey(val) {
+            userApiKey = val.trim();
+        }
+
+        const systemPrompt = `你是一位資深的內部稽核專家，熟悉企業內部控制制度、風險評估與審計準則。
+        你的任務是協助稽核人員將粗略的觀察點轉化為專業的工作底稿。
+        請遵循以下原則：
+        1. 語氣專業、客觀、簡潔。
+        2. 引用相關內控精神（例如：資產保全、職責分工）。
+        3. 輸出格式必須清晰易讀（使用Markdown）。`;
+
+        async function callGemini(userPrompt) {
+            // Check for API Key
+            if (!userApiKey) {
+                alert("請先在右側面板上方輸入您的 Google Gemini API Key 才能使用 AI 功能。");
+                document.getElementById('apiKeyInput').focus();
+                return;
+            }
+
+            const resultDiv = document.getElementById('resultContent');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            
+            loadingOverlay.classList.remove('hidden');
+            loadingOverlay.classList.add('flex');
+            
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${userApiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: userPrompt }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] }
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || response.statusText);
+                }
+
+                const data = await response.json();
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (text) {
+                    resultDiv.innerHTML = marked.parse(text);
+                } else {
+                    resultDiv.innerHTML = '<p class="text-red-500">生成失敗，請確認輸入內容是否正確。</p>';
+                }
+
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                resultDiv.innerHTML = `<p class="text-red-500 font-bold">發生錯誤</p><p class="text-red-500 text-xs">${error.message}<br><br>請檢查您的 API Key 是否正確。</p>`;
+            } finally {
+                loadingOverlay.classList.add('hidden');
+                loadingOverlay.classList.remove('flex');
+            }
+        }
+
+        function generateAuditFinding() {
+            const input = document.getElementById('auditInput').value.trim();
+            if (!input) { alert("請先輸入原始稽核發現內容"); return; }
+            const prompt = `請將以下稽核觀察點改寫為正式的內部稽核報告格式。
+            輸入內容：${input}
+            請依序產出：
+            1. **缺失摘要** (Summary)：簡明扼要地描述事實，適合填入報表。
+            2. **詳細說明** (Description)：詳細描述人、事、時、地、物及違反之原則。
+            3. **處理意見** (Audit Recommendation)：具體的改善建議措施。`;
+            callGemini(prompt);
+        }
+
+        function assessRisk() {
+            const input = document.getElementById('auditInput').value.trim();
+            if (!input) { alert("請先輸入原始稽核發現內容"); return; }
+            const prompt = `請針對以下稽核缺失進行風險評估。
+            缺失內容：${input}
+            請分析並產出：
+            1. **風險等級** (Risk Level)：請判定為 高 / 中 / 低，並說明判斷理由。
+            2. **潛在影響** (Impact)：若不改善可能導致的後果。
+            3. **建議扣分幅度** (Suggested Deduction)：依據一般稽核實務，建議扣分範圍。
+            請用表格或列點方式呈現。`;
+            callGemini(prompt);
+        }
+
+        function analyzeRootCause() {
+            const input = document.getElementById('auditInput').value.trim();
+            if (!input) { alert("請先輸入原始稽核發現內容"); return; }
+            const prompt = `請針對以下稽核缺失進行深度根因分析與預防建議。
+            缺失內容：${input}
+            請分析並產出：
+            1. **可能根因 (Root Cause)**：請從「人員 (People)」、「流程 (Process)」、「系統 (System)」三個面向分析可能原因。
+            2. **違反之內控原則**：指出此缺失違反了什麼內控精神（如：職責分工、覆核機制）。
+            3. **預防性控制建議**：如何從源頭防止再次發生（不僅僅是修正當下錯誤）。`;
+            callGemini(prompt);
+        }
+
+        function generateInterviewQuestions() {
+            const input = document.getElementById('auditInput').value.trim();
+            if (!input) { alert("請先輸入原始稽核發現內容"); return; }
+            const prompt = `我是稽核人員，觀察到了以下缺失：${input}。
+            為了進一步釐清事實、確認影響範圍或了解流程斷點，請幫我生成 3-5 個「延伸訪談問題」。
+            
+            這些問題應該：
+            1. 針對受查單位的經辦人員或主管。
+            2. 語氣專業但具備探詢性。
+            3. 目的是挖掘出真正的問題根源。`;
+            callGemini(prompt);
+        }
+    </script>
+</body>
+</html>
