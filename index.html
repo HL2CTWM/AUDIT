@@ -27,7 +27,7 @@
         .prose ul { list-style-type: disc; padding-left: 1.5em; }
         .prose strong { color: #0f172a; }
 
-        /* --- Enhanced Table Styles (New) --- */
+        /* --- Enhanced Table Styles --- */
         .prose table {
             width: 100%;
             border-collapse: collapse;
@@ -85,14 +85,14 @@
             <div class="bg-slate-50 border-b border-slate-200 px-6 py-4 flex items-center justify-between">
                 <div class="flex items-center space-x-2 text-sm text-slate-600">
                     <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>系統狀態：線上 (AI 模型就緒)</span>
+                    <span>系統狀態：線上 (Gemini 2.5 Ready)</span>
                 </div>
-                <div class="text-xs font-mono text-slate-400">v2.5.4 (API-Key-UI)</div>
+                <div class="text-xs font-mono text-slate-400">v2.7.0 (Architecture-Ready)</div>
             </div>
 
             <div class="p-6 lg:p-8 space-y-8">
                 
-                <!-- API Key Section (Restored) -->
+                <!-- API Key Section -->
                 <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-4 shadow-sm">
                     <label for="apiKeyInput" class="block text-sm font-bold text-indigo-900 mb-2 flex justify-between items-center">
                         <span class="flex items-center">
@@ -122,7 +122,7 @@
                         <textarea id="auditInput" rows="5" 
                             class="block w-full rounded-lg border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm transition ease-in-out duration-150 resize-y border"
                             placeholder="請輸入原始的查核觀察點...
-範例：查核發現營業廳監視影像監視保存不足2個月，不符金融機構安全維護管理辦法。"></textarea>
+範例：查核發現營業廳監視影像保存時間僅有 25 天，未達二個月之規定，且無專人負責管理備份紀錄。"></textarea>
                         <div class="absolute bottom-3 right-3 text-xs text-slate-400">支援純文字輸入</div>
                     </div>
                 </div>
@@ -207,17 +207,24 @@
         // System Configuration
         let userApiKey = ""; // Stores the key in memory only
 
+        // --- MODEL VERSION CONFIGURATION ---
+        // 目前環境支援的最新穩定版：gemini-2.5-flash-preview-09-2025
+        // 待 Google 開放 Gemini 3.0 後，只需修改下方變數為對應的模型 ID (例如 'gemini-3.0-pro') 即可升級。
+        const MODEL_ID = "gemini-2.5-flash-preview-09-2025"; 
+
         function updateApiKey(val) {
             userApiKey = val.trim();
         }
 
         // Core System Persona Definition
-        const systemPrompt = `你是一位資深的內部稽核專家，熟悉資訊產業與金融業的各種法規與作業流程、企業內部控制制度、風險評估與審計準則、金融科技技術與監理法規。
-        你的任務是協助稽核人員將粗略的觀察點轉化為專業的工作底稿。
+        const systemPrompt = `你是一位台灣金融業資深的內部稽核專家，熟悉金管會、中央銀行、銀行局、銀行公會等主管機關之法令規章（如銀行法、信用合作社法、洗錢防制法、資通安全管理法、金融機構安全維護管理辦法等）。
+        你的任務是協助信用合作社（如花蓮二信）稽核人員將粗略的觀察點轉化為專業的工作底稿。
+
         請遵循以下原則：
         1. 語氣專業、客觀、簡潔。
-        2. 引用相關內控精神（例如：資產保全、職責分工、資通安全）。
-        3. 輸出格式必須清晰易讀（使用Markdown）。`;
+        2. **法令依據**：請務必優先引用金管會、中央銀行等主管機關之最新法令、函釋或銀行公會規範作為查核依據，避免僅引用一般內控原則。
+        3. **明確指出**：分析時必須明確列出「可能違反的法令名稱」及「具體條文/項次」。
+        4. 輸出格式必須清晰易讀（使用Markdown）。`;
 
         // UI Helpers
         const dom = {
@@ -268,7 +275,7 @@
                     輸入內容：${inputVal}
                     請依序產出：
                     1. **缺失摘要** (Summary)：簡明扼要地描述事實，適合填入報表。
-                    2. **詳細說明** (Description)：詳細描述人、事、時、地、物及違反之原則/法規。
+                    2. **詳細說明** (Description)：詳細描述人、事、時、地、物及違反之法令條文（請明確指出金管會/央行/信用合作社相關法規名稱與條號）。
                     3. **處理意見** (Audit Recommendation)：具體的改善建議措施。`;
                     break;
                 case 'risk':
@@ -276,7 +283,7 @@
                     缺失內容：${inputVal}
                     請分析並產出：
                     1. **風險等級** (Risk Level)：請判定為 高 / 中 / 低，並說明判斷理由。
-                    2. **潛在影響** (Impact)：若不改善可能導致的後果（請考量財務、營運、法遵風險）。
+                    2. **潛在影響** (Impact)：若不改善可能導致的後果（請考量財務、營運、法遵風險，並引用可能違反之法規）。
                     3. **建議扣分幅度** (Suggested Deduction)：依據一般稽核實務，建議扣分範圍。
                     請用表格呈現。`;
                     break;
@@ -285,23 +292,23 @@
                     缺失內容：${inputVal}
                     請分析並產出：
                     1. **可能根因 (Root Cause)**：請從「人員 (People)」、「流程 (Process)」、「系統 (System)」三個面向分析可能原因。
-                    2. **違反之內控原則**：指出此缺失違反了什麼內控精神（如：職責分工、覆核機制）。
+                    2. **違反之內控原則與法規**：指出違反的內控精神及具體法令依據（如信用合作社法、金融控股公司及銀行業內部控制及稽核制度實施辦法等）。
                     3. **預防性控制建議**：如何從源頭防止再次發生（Systemic Fix）。`;
                     break;
                 case 'interview':
-                    userPrompt = `我是稽核人員，觀察到了以下缺失：${inputVal}。
+                    userPrompt = `我是信用合作社稽核人員，觀察到了以下缺失：${inputVal}。
                     為了進一步釐清事實、確認影響範圍或了解流程斷點，請幫我生成 3-5 個「延伸訪談問題」。
                     
                     這些問題應該：
                     1. 針對受查單位的經辦人員或主管。
                     2. 語氣專業但具備探詢性。
-                    3. 目的是挖掘出真正的問題根源。`;
+                    3. 目的是挖掘出真正的問題根源與法規遵循狀況。`;
                     break;
             }
 
             try {
-                // Call Gemini API with userApiKey
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${userApiKey}`, {
+                // Call Gemini API with userApiKey AND Configured Model ID
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:generateContent?key=${userApiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -326,7 +333,7 @@
 
             } catch (error) {
                 console.error(error);
-                renderError(`系統錯誤：${error.message}<br>請確認 API Key 是否正確或網路連線是否正常。`);
+                renderError(`系統錯誤：${error.message}<br>請確認 API Key 是否正確或網路連線是否正常。<br>目前使用模型: ${MODEL_ID}`);
             } finally {
                 setLoading(false);
             }
